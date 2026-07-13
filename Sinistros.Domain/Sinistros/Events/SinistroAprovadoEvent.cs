@@ -1,15 +1,15 @@
 using System;
 using Sinistros.Domain.SeedWork;
 
-namespace Sinistros.Domain.Sinistros
+namespace Sinistros.Domain.Sinistros.Events
 {
-    public class SinistroAbertoEvent : IDomainEvent
+    public class SinistroAprovadoEvent : IDomainEvent
     {
         public Guid SinistroId { get; }
         public Guid ApoliceId { get; }
         public DateTime OcorreuEm { get; }
 
-        public SinistroAbertoEvent(Guid sinistroId, Guid apoliceId)
+        public SinistroAprovadoEvent(Guid sinistroId, Guid apoliceId)
         {
             SinistroId = sinistroId;
             ApoliceId = apoliceId;

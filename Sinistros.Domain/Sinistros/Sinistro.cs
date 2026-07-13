@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Sinistros.Domain.Enums;
 using Sinistros.Domain.Exceptions;
 using Sinistros.Domain.SeedWork;
+using Sinistros.Domain.Sinistros.Events;
 
 namespace Sinistros.Domain.Sinistros
 {
@@ -117,7 +118,17 @@ namespace Sinistros.Domain.Sinistros
             Status = novoStatus;
 
             _historicoSinistros.Add(new HistoricoSinistro(Id, statusAnterior, novoStatus, motivo, usuario));
-            AdicionarEvento(new SinistroStatusAlteradoEvent(Id, statusAnterior, novoStatus));
+
+            IDomainEvent evento = novoStatus switch
+            {
+                StatusSinistro.EmAnalise => new SinistroEnviadoParaAnaliseEvent(Id, ApoliceId),
+                StatusSinistro.Aprovado => new SinistroAprovadoEvent(Id, ApoliceId),
+                StatusSinistro.Negado => new SinistroNegadoEvent(Id, ApoliceId, Motivo ?? throw new InvalidOperationException("Motivo da negativa não informado.")),
+                StatusSinistro.Encerrado => new SinistroEncerradoEvent(Id, ApoliceId, ValorAprovado ?? throw new InvalidOperationException("Valor aprovado não informado.")),
+                _ => throw new InvalidOperationException($"Nenhum evento configurado para o status {novoStatus}.")
+            };
+
+            AdicionarEvento(evento);
         }
     }
 }
