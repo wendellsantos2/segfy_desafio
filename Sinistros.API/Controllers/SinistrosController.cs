@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using MediatR;
 using Microsoft.AspNetCore.Http;
@@ -86,5 +87,49 @@ namespace Sinistros.API.Controllers
             var result = await _mediator.Send(query);
             return Ok(result);
         }
+
+        /// <summary>
+        /// Atualiza o status de um sinistro (Em Análise, Aprovado, Negado, Encerrado).
+        /// </summary>
+        /// <param name="id">ID único do sinistro.</param>
+        /// <param name="request">Payload com o novo status. Para Negado: informe motivoNegativa. Para Encerrado: informe valorAprovado.</param>
+        /// <returns>204 NoContent em caso de sucesso.</returns>
+        /// <response code="200">Status atualizado com sucesso.</response>
+        /// <response code="404">Sinistro não encontrado.</response>
+        /// <response code="422">Regra de negócio violada (transição inválida, motivo vazio, valor inválido).</response>
+        [HttpPatch("{id}/status")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+        public async Task<IActionResult> AtualizarStatus(Guid id, [FromBody] AtualizarStatusRequest request)
+        {
+            var command = new AtualizarStatusCommand(id, request.Status, request.Usuario, request.MotivoNegativa, request.ValorAprovado);
+            await _mediator.Send(command);
+            return Ok();
+        }
+
+        /// <summary>
+        /// Retorna o histórico de transições de status de um sinistro, ordenado da alteração mais recente para a mais antiga.
+        /// </summary>
+        /// <param name="id">ID único do sinistro.</param>
+        /// <returns>Lista de eventos de histórico do sinistro.</returns>
+        /// <response code="200">Histórico retornado com sucesso.</response>
+        /// <response code="404">Sinistro não encontrado.</response>
+        [HttpGet("{id}/historico")]
+        [ProducesResponseType(typeof(IReadOnlyList<HistoricoSinistroResponse>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> ObterHistorico(Guid id)
+        {
+            var query = new ObterHistoricoSinistroQuery(id);
+            var result = await _mediator.Send(query);
+            return Ok(result);
+        }
     }
 }
+
+public record AtualizarStatusRequest(
+    string Status,
+    string Usuario,
+    string? MotivoNegativa = null,
+    decimal? ValorAprovado = null);
+

@@ -19,14 +19,18 @@ builder.Services.AddSwaggerGen(c =>
     }
 });
 
+// Registrar IExceptionHandler (.NET 8) + ProblemDetails (RFC 7807)
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
+
 // Registrar serviços das camadas de Application e Infrastructure
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
 var app = builder.Build();
 
-// Middleware Global de Tratamento de Erros
-app.UseMiddleware<ExceptionHandlingMiddleware>();
+// Handler global de exceções via IExceptionHandler (.NET 8)
+app.UseExceptionHandler();
 
 // Aplicar migrations e seed automaticamente no startup
 using (var scope = app.Services.CreateScope())
@@ -56,29 +60,4 @@ app.UseHttpsRedirection();
 
 app.MapControllers();
 
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast")
-.WithOpenApi();
-
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}

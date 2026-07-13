@@ -34,9 +34,7 @@ namespace Sinistros.Application.Sinistros.Commands
                 ?? throw new NotFoundException("Sinistro não encontrado.");
 
             if (!Enum.TryParse<StatusSinistro>(request.Status, true, out var statusNovo))
-            {
-                throw new RegraNegocioException("Status inválido.");
-            }
+                throw new RegraNegocioException($"Status '{request.Status}' é inválido.");
 
             switch (statusNovo)
             {
@@ -47,21 +45,18 @@ namespace Sinistros.Application.Sinistros.Commands
                     sinistro.Aprovar(request.Usuario);
                     break;
                 case StatusSinistro.Negado:
-                    if (string.IsNullOrWhiteSpace(request.MotivoNegativa))
-                        throw new RegraNegocioException("O motivo da negativa é obrigatório para negar o sinistro.");
-                    sinistro.Negar(new MotivoNegativa(request.MotivoNegativa), request.Usuario);
+                    // MotivoNegativa VO lança RegraNegocioException se motivo for vazio
+                    sinistro.Negar(new MotivoNegativa(request.MotivoNegativa ?? string.Empty), request.Usuario);
                     break;
                 case StatusSinistro.Encerrado:
-                    if (!request.ValorAprovado.HasValue)
-                        throw new RegraNegocioException("O valor aprovado é obrigatório para encerrar o sinistro.");
-                    sinistro.Encerrar(new Dinheiro(request.ValorAprovado.Value), request.Usuario);
+                    // Dinheiro VO lança RegraNegocioException se valor for inválido
+                    sinistro.Encerrar(new Dinheiro(request.ValorAprovado ?? 0m), request.Usuario);
                     break;
                 default:
-                    throw new RegraNegocioException($"Transição para o status {statusNovo} não suportada por este comando.");
+                    throw new RegraNegocioException($"Transição para '{statusNovo}' não suportada por este comando.");
             }
 
             await _unitOfWork.CommitAsync(cancellationToken);
-
             return Unit.Value;
         }
     }

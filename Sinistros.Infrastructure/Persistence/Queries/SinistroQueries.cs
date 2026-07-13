@@ -51,6 +51,32 @@ namespace Sinistros.Infrastructure.Persistence.Queries
                 .FirstOrDefaultAsync(cancellationToken);
         }
 
+        public async Task<IReadOnlyList<HistoricoSinistroResponse>?> ObterHistoricoAsync(Guid sinistroId, CancellationToken cancellationToken = default)
+        {
+            // Verifica existência do sinistro sem carregar o agregado
+            var existe = await _context.Sinistros
+                .AsNoTracking()
+                .AnyAsync(s => s.Id == sinistroId, cancellationToken);
+
+            if (!existe)
+                return null;
+
+            return await _context.Set<Sinistros.Domain.Sinistros.HistoricoSinistro>()
+                .AsNoTracking()
+                .Where(h => h.SinistroId == sinistroId)
+                .OrderByDescending(h => h.DataAlteracao)
+                .Select(h => new HistoricoSinistroResponse
+                {
+                    Id = h.Id,
+                    StatusAnterior = h.StatusAnterior != null ? h.StatusAnterior.ToString() : null,
+                    StatusNovo = h.StatusNovo.ToString(),
+                    DataAlteracao = h.DataAlteracao,
+                    Motivo = h.Motivo,
+                    Usuario = h.Usuario
+                })
+                .ToListAsync(cancellationToken);
+        }
+
         public async Task<PagedResult<SinistroResponse>> ListarAsync(
             string? status,
             DateTime? dataInicio,
