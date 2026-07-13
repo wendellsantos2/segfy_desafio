@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Sinistros.API.Middlewares;
 using Sinistros.Application;
 using Sinistros.Infrastructure;
 using Sinistros.Infrastructure.Persistence;
@@ -6,7 +7,7 @@ using Sinistros.Infrastructure.Persistence;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -15,6 +16,9 @@ builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
 var app = builder.Build();
+
+// Middleware Global de Tratamento de Erros
+app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 // Aplicar migrations e seed automaticamente no startup
 using (var scope = app.Services.CreateScope())
@@ -41,6 +45,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.MapControllers();
 
 var summaries = new[]
 {
