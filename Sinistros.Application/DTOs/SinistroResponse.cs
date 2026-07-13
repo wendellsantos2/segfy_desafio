@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using Sinistros.Domain.Sinistros;
 
 namespace Sinistros.Application.DTOs
@@ -15,6 +17,7 @@ namespace Sinistros.Application.DTOs
         public string Status { get; set; } = string.Empty;
         public string? MotivoNegativa { get; set; }
         public DateTime? DataEncerramento { get; set; }
+        public List<HistoricoSinistroResponse> Historico { get; set; } = new();
 
         public static SinistroResponse Mapear(Sinistro sinistro)
         {
@@ -29,8 +32,29 @@ namespace Sinistros.Application.DTOs
                 ValorAprovado = sinistro.ValorAprovado?.Valor,
                 Status = sinistro.Status.ToString(),
                 MotivoNegativa = sinistro.Motivo?.Texto,
-                DataEncerramento = sinistro.DataEncerramento
+                DataEncerramento = sinistro.DataEncerramento,
+                Historico = sinistro.HistoricoSinistros
+                    .Select(h => new HistoricoSinistroResponse
+                    {
+                        Id = h.Id,
+                        StatusAnterior = h.StatusAnterior?.ToString(),
+                        StatusNovo = h.StatusNovo.ToString(),
+                        DataAlteracao = h.DataAlteracao,
+                        Motivo = h.Motivo,
+                        Usuario = h.Usuario
+                    })
+                    .ToList()
             };
         }
+    }
+
+    public class HistoricoSinistroResponse
+    {
+        public Guid Id { get; set; }
+        public string? StatusAnterior { get; set; }
+        public string StatusNovo { get; set; } = string.Empty;
+        public DateTime DataAlteracao { get; set; }
+        public string? Motivo { get; set; }
+        public string Usuario { get; set; } = string.Empty;
     }
 }

@@ -7,6 +7,8 @@ using Sinistros.Domain.SeedWork;
 using Sinistros.Domain.Sinistros;
 using Sinistros.Infrastructure.Persistence;
 using Sinistros.Infrastructure.Persistence.Repositories;
+using Sinistros.Application.Interfaces;
+using Sinistros.Infrastructure.Persistence.Queries;
 
 namespace Sinistros.Infrastructure
 {
@@ -24,6 +26,7 @@ namespace Sinistros.Infrastructure
             services.AddScoped<IClienteRepository, ClienteRepository>();
             services.AddScoped<IApoliceRepository, ApoliceRepository>();
             services.AddScoped<ISinistroRepository, SinistroRepository>();
+            services.AddScoped<ISinistroQueries, SinistroQueries>();
 
             return services;
         }

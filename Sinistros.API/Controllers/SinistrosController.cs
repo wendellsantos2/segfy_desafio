@@ -4,6 +4,7 @@ using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Sinistros.Application.DTOs;
+using Sinistros.Application.Sinistros.Queries;
 using Sinistros.Application.Sinistros.Commands;
 
 namespace Sinistros.API.Controllers
@@ -44,7 +45,7 @@ namespace Sinistros.API.Controllers
         }
 
         /// <summary>
-        /// Obtém os detalhes de um sinistro por ID.
+        /// Obtém os detalhes de um sinistro por ID, incluindo seu histórico completo.
         /// </summary>
         /// <param name="id">ID único do sinistro.</param>
         /// <returns>Dados detalhados do sinistro.</returns>
@@ -53,9 +54,37 @@ namespace Sinistros.API.Controllers
         [HttpGet("{id}")]
         [ProducesResponseType(typeof(SinistroResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public Task<IActionResult> ObterPorId(Guid id)
+        public async Task<IActionResult> ObterPorId(Guid id)
         {
-            return Task.FromResult<IActionResult>(Ok());
+            var query = new ObterSinistroQuery(id);
+            var result = await _mediator.Send(query);
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// Lista os sinistros de forma paginada e filtrada por status e período de data.
+        /// </summary>
+        /// <param name="status">Status do sinistro para filtragem (opcional).</param>
+        /// <param name="dataInicio">Data inicial do período (opcional).</param>
+        /// <param name="dataFim">Data final do período (opcional).</param>
+        /// <param name="campoData">Define se o período filtra pela data de 'abertura' ou 'ocorrencia'. O padrão é 'abertura' (opcional).</param>
+        /// <param name="page">Número da página para paginação (padrão é 1).</param>
+        /// <param name="pageSize">Tamanho da página para paginação (padrão é 10).</param>
+        /// <returns>Envelope PagedResult com a lista de sinistros e metadados de paginação.</returns>
+        /// <response code="200">Lista de sinistros retornada com sucesso.</response>
+        [HttpGet]
+        [ProducesResponseType(typeof(PagedResult<SinistroResponse>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> Listar(
+            [FromQuery] string? status,
+            [FromQuery] DateTime? dataInicio,
+            [FromQuery] DateTime? dataFim,
+            [FromQuery] string? campoData,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10)
+        {
+            var query = new ListarSinistrosQuery(status, dataInicio, dataFim, campoData, page, pageSize);
+            var result = await _mediator.Send(query);
+            return Ok(result);
         }
     }
 }
