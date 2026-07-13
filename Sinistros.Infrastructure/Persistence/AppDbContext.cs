@@ -1,12 +1,15 @@
+using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Sinistros.Domain.Apolices;
 using Sinistros.Domain.Clientes;
 using Sinistros.Domain.SeedWork;
 using Sinistros.Domain.Sinistros;
+using Sinistros.Infrastructure.Persistence.Events;
 
 namespace Sinistros.Infrastructure.Persistence
 {
@@ -16,13 +19,46 @@ namespace Sinistros.Infrastructure.Persistence
         public DbSet<Apolice> Apolices { get; set; }
         public DbSet<Sinistro> Sinistros { get; set; }
 
-        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
+        private readonly IMediator _mediator;
+
+        public AppDbContext(DbContextOptions<AppDbContext> options, IMediator mediator) : base(options)
         {
+            _mediator = mediator;
         }
 
         public async Task<bool> CommitAsync(CancellationToken cancellationToken = default)
         {
-            return await SaveChangesAsync(cancellationToken) > 0;
+            // 1. Coletar os DomainEvents de todas as AggregateRoots rastreadas
+            var aggregateRoots = ChangeTracker
+                .Entries<AggregateRoot>()
+                .Where(x => x.Entity.DomainEvents != null && x.Entity.DomainEvents.Any())
+                .Select(x => x.Entity)
+                .ToList();
+
+            var domainEvents = aggregateRoots
+                .SelectMany(x => x.DomainEvents)
+                .ToList();
+
+            // 2. Chamar SaveChangesAsync
+            var result = await SaveChangesAsync(cancellationToken) > 0;
+
+            // 3. SÓ ENTÃO publicar os eventos
+            if (domainEvents.Any())
+            {
+                foreach (var domainEvent in domainEvents)
+                {
+                    var adapter = new DomainEventNotificationAdapter(domainEvent);
+                    await _mediator.Publish(adapter, cancellationToken);
+                }
+
+                // 4. Limpar os eventos das entidades
+                foreach (var aggregateRoot in aggregateRoots)
+                {
+                    aggregateRoot.LimparEventos();
+                }
+            }
+
+            return result;
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
