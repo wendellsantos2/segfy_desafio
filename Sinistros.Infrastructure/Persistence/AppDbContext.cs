@@ -87,7 +87,13 @@ namespace Sinistros.Infrastructure.Persistence
             {
                 foreach (var property in entity.GetProperties())
                 {
-                    var columnName = ConvertToSnakeCase(property.Name);
+                    if (entity.IsOwned() && property.IsPrimaryKey())
+                    {
+                        continue;
+                    }
+
+                    var currentColumnName = property.GetColumnName() ?? property.Name;
+                    var columnName = ConvertToSnakeCase(currentColumnName);
                     property.SetColumnName(columnName);
 
                     if (property.ClrType == typeof(decimal) || property.ClrType == typeof(decimal?))
@@ -99,19 +105,22 @@ namespace Sinistros.Infrastructure.Persistence
                     }
                 }
 
-                foreach (var key in entity.GetKeys())
+                if (!entity.IsOwned())
                 {
-                    key.SetName(ConvertToSnakeCase(key.GetName() ?? ""));
-                }
+                    foreach (var key in entity.GetKeys())
+                    {
+                        key.SetName(ConvertToSnakeCase(key.GetName() ?? ""));
+                    }
 
-                foreach (var fk in entity.GetForeignKeys())
-                {
-                    fk.SetConstraintName(ConvertToSnakeCase(fk.GetConstraintName() ?? ""));
-                }
+                    foreach (var fk in entity.GetForeignKeys())
+                    {
+                        fk.SetConstraintName(ConvertToSnakeCase(fk.GetConstraintName() ?? ""));
+                    }
 
-                foreach (var index in entity.GetIndexes())
-                {
-                    index.SetDatabaseName(ConvertToSnakeCase(index.GetDatabaseName() ?? ""));
+                    foreach (var index in entity.GetIndexes())
+                    {
+                        index.SetDatabaseName(ConvertToSnakeCase(index.GetDatabaseName() ?? ""));
+                    }
                 }
             }
 
