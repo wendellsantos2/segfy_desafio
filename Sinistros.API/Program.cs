@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Sinistros.Application;
 using Sinistros.Infrastructure;
 using Sinistros.Infrastructure.Persistence;
 
@@ -9,12 +10,9 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Registrar infraestrutura e MediatR nas assemblies da API e da Infraestrutura
+// Registrar serviços das camadas de Application e Infrastructure
+builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
-builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblies(
-    typeof(Program).Assembly,
-    typeof(DependencyInjection).Assembly
-));
 
 var app = builder.Build();
 
