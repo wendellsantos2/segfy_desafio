@@ -2,7 +2,7 @@ using System;
 
 namespace Sinistros.Domain.Exceptions
 {
-    public class RegraNegocioException : Exception
+    public class RegraNegocioException : DomainException
     {
         public RegraNegocioException(string message) : base(message)
         {
