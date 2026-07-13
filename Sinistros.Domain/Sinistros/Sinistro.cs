@@ -56,10 +56,10 @@ namespace Sinistros.Domain.Sinistros
             
             Status = StatusSinistro.Aberto;
             _historicoSinistros.Add(new HistoricoSinistro(Id, null, StatusSinistro.Aberto, "Abertura do sinistro", usuario));
-            AdicionarEvento(new SinistroStatusAlteradoEvent(Id, null, StatusSinistro.Aberto));
+            AdicionarEvento(new SinistroAbertoEvent(Id, ApoliceId));
         }
 
-        public static Sinistro Abrir(Guid apoliceId, DateTime dataOcorrencia, string descricao, Dinheiro valorEstimado, string usuario)
+        public static Sinistro Abrir(Guid apoliceId, DateTime dataOcorrencia, string descricao, Dinheiro valorEstimado, string usuario = "Sistema")
         {
             if (string.IsNullOrWhiteSpace(usuario))
                 throw new RegraNegocioException("O usuário é obrigatório.");
