@@ -16,8 +16,28 @@ namespace Sinistros.Domain.Sinistros
         public DateTime DataAbertura { get; private set; }
         public string Descricao { get; private set; }
         public Dinheiro ValorEstimado { get; private set; }
-        public Dinheiro? ValorAprovado { get; private set; }
-        public MotivoNegativa? Motivo { get; private set; }
+        private decimal? _valorAprovadoQuantia;
+        private string? _valorAprovadoMoeda;
+        private string? _motivoNegativaTexto;
+
+        public Dinheiro? ValorAprovado 
+        {
+            get => _valorAprovadoQuantia.HasValue ? new Dinheiro(_valorAprovadoQuantia.Value, _valorAprovadoMoeda ?? "BRL") : null;
+            private set 
+            {
+                _valorAprovadoQuantia = value?.Valor;
+                _valorAprovadoMoeda = value?.Moeda;
+            }
+        }
+
+        public MotivoNegativa? Motivo 
+        {
+            get => string.IsNullOrEmpty(_motivoNegativaTexto) ? null : new MotivoNegativa(_motivoNegativaTexto);
+            private set
+            {
+                _motivoNegativaTexto = value?.Texto;
+            }
+        }
         public StatusSinistro Status { get; private set; }
         public DateTime? DataEncerramento { get; private set; }
 

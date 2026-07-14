@@ -39,6 +39,16 @@ namespace Sinistros.Infrastructure.Persistence
                 .SelectMany(x => x.DomainEvents)
                 .ToList();
 
+            // Fix para EF Core: Histórico é append-only. Se o EF tentar atualizar, force para Added.
+            // Isso previne o bug onde o EF Core tenta fazer UPDATE em uma entidade recém-adicionada à coleção com Guid próprio.
+            foreach (var entry in ChangeTracker.Entries<HistoricoSinistro>())
+            {
+                if (entry.State == EntityState.Modified)
+                {
+                    entry.State = EntityState.Added;
+                }
+            }
+
             // 2. Chamar SaveChangesAsync
             var result = await SaveChangesAsync(cancellationToken) > 0;
 

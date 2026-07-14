@@ -81,7 +81,7 @@ export interface CriarApoliceRequest {
 }
 
 export interface AtualizarStatusApoliceRequest {
-  acao: 'Suspender' | 'Reativar' | 'Cancelar';
+  status: 'Suspensa' | 'Ativa' | 'Cancelada';
 }
 
 // ─── Filtros ─────────────────────────────────────────────────────────────────

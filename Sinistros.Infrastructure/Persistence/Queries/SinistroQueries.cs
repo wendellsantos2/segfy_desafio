@@ -21,34 +21,39 @@ namespace Sinistros.Infrastructure.Persistence.Queries
 
         public async Task<SinistroResponse?> ObterPorIdAsync(Guid id, CancellationToken cancellationToken = default)
         {
-            return await _context.Sinistros
+            var s = await _context.Sinistros
+                .Include(x => x.HistoricoSinistros)
                 .AsNoTracking()
-                .Where(s => s.Id == id)
-                .Select(s => new SinistroResponse
-                {
-                    Id = s.Id,
-                    ApoliceId = s.ApoliceId,
-                    DataOcorrencia = s.DataOcorrencia,
-                    DataAbertura = s.DataAbertura,
-                    Descricao = s.Descricao,
-                    ValorEstimado = s.ValorEstimado.Valor,
-                    ValorAprovado = s.ValorAprovado != null ? s.ValorAprovado.Valor : (decimal?)null,
-                    Status = s.Status.ToString(),
-                    MotivoNegativa = s.Motivo != null ? s.Motivo.Texto : null,
-                    DataEncerramento = s.DataEncerramento,
-                    Historico = s.HistoricoSinistros
-                        .Select(h => new HistoricoSinistroResponse
-                        {
-                            Id = h.Id,
-                            StatusAnterior = h.StatusAnterior != null ? h.StatusAnterior.ToString() : null,
-                            StatusNovo = h.StatusNovo.ToString(),
-                            DataAlteracao = h.DataAlteracao,
-                            Motivo = h.Motivo,
-                            Usuario = h.Usuario
-                        })
-                        .ToList()
-                })
-                .FirstOrDefaultAsync(cancellationToken);
+                .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+
+            if (s == null)
+                return null;
+
+            return new SinistroResponse
+            {
+                Id = s.Id,
+                ApoliceId = s.ApoliceId,
+                DataOcorrencia = s.DataOcorrencia,
+                DataAbertura = s.DataAbertura,
+                Descricao = s.Descricao,
+                ValorEstimado = s.ValorEstimado.Valor,
+                ValorAprovado = s.ValorAprovado != null ? s.ValorAprovado.Valor : (decimal?)null,
+                Status = s.Status.ToString(),
+                MotivoNegativa = s.Motivo != null ? s.Motivo.Texto : null,
+                DataEncerramento = s.DataEncerramento,
+                Historico = s.HistoricoSinistros
+                    .OrderByDescending(h => h.DataAlteracao)
+                    .Select(h => new HistoricoSinistroResponse
+                    {
+                        Id = h.Id,
+                        StatusAnterior = h.StatusAnterior != null ? h.StatusAnterior.ToString() : null,
+                        StatusNovo = h.StatusNovo.ToString(),
+                        DataAlteracao = h.DataAlteracao,
+                        Motivo = h.Motivo,
+                        Usuario = h.Usuario
+                    })
+                    .ToList()
+            };
         }
 
         public async Task<IReadOnlyList<HistoricoSinistroResponse>?> ObterHistoricoAsync(Guid sinistroId, CancellationToken cancellationToken = default)
@@ -125,35 +130,38 @@ namespace Sinistros.Infrastructure.Persistence.Queries
 
             var totalItems = await query.CountAsync(cancellationToken);
 
-            var items = await query
+            var itemsList = await query
                 .OrderByDescending(s => s.DataAbertura)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .Select(s => new SinistroResponse
-                {
-                    Id = s.Id,
-                    ApoliceId = s.ApoliceId,
-                    DataOcorrencia = s.DataOcorrencia,
-                    DataAbertura = s.DataAbertura,
-                    Descricao = s.Descricao,
-                    ValorEstimado = s.ValorEstimado.Valor,
-                    ValorAprovado = s.ValorAprovado != null ? s.ValorAprovado.Valor : (decimal?)null,
-                    Status = s.Status.ToString(),
-                    MotivoNegativa = s.Motivo != null ? s.Motivo.Texto : null,
-                    DataEncerramento = s.DataEncerramento,
-                    Historico = s.HistoricoSinistros
-                        .Select(h => new HistoricoSinistroResponse
-                        {
-                            Id = h.Id,
-                            StatusAnterior = h.StatusAnterior != null ? h.StatusAnterior.ToString() : null,
-                            StatusNovo = h.StatusNovo.ToString(),
-                            DataAlteracao = h.DataAlteracao,
-                            Motivo = h.Motivo,
-                            Usuario = h.Usuario
-                        })
-                        .ToList()
-                })
+                .Include(s => s.HistoricoSinistros)
                 .ToListAsync(cancellationToken);
+
+            var items = itemsList.Select(s => new SinistroResponse
+            {
+                Id = s.Id,
+                ApoliceId = s.ApoliceId,
+                DataOcorrencia = s.DataOcorrencia,
+                DataAbertura = s.DataAbertura,
+                Descricao = s.Descricao,
+                ValorEstimado = s.ValorEstimado.Valor,
+                ValorAprovado = s.ValorAprovado != null ? s.ValorAprovado.Valor : (decimal?)null,
+                Status = s.Status.ToString(),
+                MotivoNegativa = s.Motivo != null ? s.Motivo.Texto : null,
+                DataEncerramento = s.DataEncerramento,
+                Historico = s.HistoricoSinistros
+                    .OrderByDescending(h => h.DataAlteracao)
+                    .Select(h => new HistoricoSinistroResponse
+                    {
+                        Id = h.Id,
+                        StatusAnterior = h.StatusAnterior != null ? h.StatusAnterior.ToString() : null,
+                        StatusNovo = h.StatusNovo.ToString(),
+                        DataAlteracao = h.DataAlteracao,
+                        Motivo = h.Motivo,
+                        Usuario = h.Usuario
+                    })
+                    .ToList()
+            }).ToList();
 
             return new PagedResult<SinistroResponse>(items, totalItems, page, pageSize);
         }

@@ -43,23 +43,20 @@ namespace Sinistros.Infrastructure.Persistence.Configurations
                     .IsRequired();
             });
 
-            builder.OwnsOne(s => s.ValorAprovado, val =>
-            {
-                val.Property(v => v.Valor)
-                    .HasColumnName("valor_aprovado_quantia")
-                    .HasColumnType("decimal(18,2)");
-                
-                val.Property(v => v.Moeda)
-                    .HasColumnName("valor_aprovado_moeda")
-                    .HasMaxLength(10);
-            });
+            builder.Ignore(s => s.ValorAprovado);
+            builder.Ignore(s => s.Motivo);
 
-            builder.OwnsOne(s => s.Motivo, mot =>
-            {
-                mot.Property(m => m.Texto)
-                    .HasColumnName("motivo_negativa_texto")
-                    .HasMaxLength(500);
-            });
+            builder.Property("_valorAprovadoQuantia")
+                .HasColumnName("valor_aprovado_quantia")
+                .HasColumnType("decimal(18,2)");
+
+            builder.Property("_valorAprovadoMoeda")
+                .HasColumnName("valor_aprovado_moeda")
+                .HasMaxLength(10);
+
+            builder.Property("_motivoNegativaTexto")
+                .HasColumnName("motivo_negativa_texto")
+                .HasMaxLength(500);
 
             builder.HasMany(s => s.HistoricoSinistros)
                 .WithOne()

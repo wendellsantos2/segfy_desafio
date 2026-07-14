@@ -124,23 +124,23 @@ export function SinistroDetail() {
 
         {/* Timeline Vertical */}
         <div className="lg:col-span-1">
-          <div className="card p-6 h-full">
+          <div className="card p-6 h-full border border-surface-800 bg-surface-900/50">
             <h2 className="text-lg font-semibold text-slate-200 mb-6 flex items-center gap-2">
               <Clock className="w-5 h-5 text-slate-400" />
               Histórico
             </h2>
             
-            <div className="space-y-6 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-surface-700 before:to-transparent">
+            <div className="space-y-6 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-surface-700 before:to-transparent">
               {historico?.map((h) => (
-                <div key={h.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
-                  <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-surface-900 bg-surface-700 text-slate-400 group-hover:text-brand-400 group-hover:bg-brand-900/30 transition-colors shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10">
+                <div key={h.id} className="relative flex items-start gap-4 group">
+                  <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-surface-900 bg-surface-800 text-slate-400 group-hover:text-brand-400 group-hover:bg-brand-900/30 transition-colors shadow shrink-0 z-10 mt-1">
                     <div className="w-2 h-2 rounded-full bg-current" />
                   </div>
-                  <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] card p-4">
+                  <div className="flex-1 card p-4 bg-surface-800/50 hover:bg-surface-800 transition-colors border-surface-700">
                     <div className="flex flex-col gap-1">
-                      <div className="flex justify-between items-center mb-1">
+                      <div className="flex justify-between items-start gap-2 mb-1">
                         <StatusBadge status={h.statusNovo} />
-                        <span className="text-xs text-slate-500 font-mono">
+                        <span className="text-xs text-slate-500 font-mono shrink-0">
                           {new Date(h.dataAlteracao).toLocaleDateString('pt-BR')}
                         </span>
                       </div>
@@ -148,12 +148,12 @@ export function SinistroDetail() {
                         De: <span className="font-semibold text-slate-300">{h.statusAnterior || 'Nenhum'}</span>
                       </p>
                       {h.motivo && (
-                        <p className="text-xs text-slate-400 mt-1 italic border-l-2 border-surface-700 pl-2">
+                        <p className="text-xs text-slate-400 mt-1 italic border-l-2 border-surface-600 pl-2">
                           "{h.motivo}"
                         </p>
                       )}
-                      <p className="text-[10px] text-slate-500 mt-2 text-right">
-                        por {h.usuario}
+                      <p className="text-[10px] text-slate-500 mt-3 pt-2 border-t border-surface-700/50 text-right">
+                        por <span className="font-medium text-slate-400">{h.usuario}</span>
                       </p>
                     </div>
                   </div>

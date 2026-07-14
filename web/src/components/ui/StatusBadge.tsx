@@ -34,7 +34,7 @@ export function StatusBadge({ status, className = '' }: BadgeProps) {
   const label = LABEL_MAP[status] ?? status;
 
   return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${style} ${className}`}>
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border whitespace-nowrap ${style} ${className}`}>
       {label}
     </span>
   );

@@ -24,7 +24,10 @@ export function ApolicesList() {
     const executar = async (acao: 'Suspender' | 'Reativar' | 'Cancelar') => {
       if (!window.confirm(`Confirma ${acao.toLowerCase()}?`)) return;
       try {
-        await mut.mutateAsync({ acao });
+        let statusNovo: 'Suspensa' | 'Ativa' | 'Cancelada' = 'Suspensa';
+        if (acao === 'Reativar') statusNovo = 'Ativa';
+        if (acao === 'Cancelar') statusNovo = 'Cancelada';
+        await mut.mutateAsync({ status: statusNovo });
       } catch (e: any) {
         alert(e?.friendlyMessage || 'Erro.');
       }
