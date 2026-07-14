@@ -11,9 +11,9 @@ namespace Sinistros.Application.Apolices.Queries
         string? Status = null,
         int Page = 1,
         int PageSize = 10
-    ) : IRequest<PaginatedList<ApoliceResponse>>;
+    ) : IRequest<PagedResult<ApoliceResponse>>;
 
-    public class ListarApolicesQueryHandler : IRequestHandler<ListarApolicesQuery, PaginatedList<ApoliceResponse>>
+    public class ListarApolicesQueryHandler : IRequestHandler<ListarApolicesQuery, PagedResult<ApoliceResponse>>
     {
         private readonly IApoliceRepository _apoliceRepository;
 
@@ -22,7 +22,7 @@ namespace Sinistros.Application.Apolices.Queries
             _apoliceRepository = apoliceRepository;
         }
 
-        public async Task<PaginatedList<ApoliceResponse>> Handle(ListarApolicesQuery request, CancellationToken cancellationToken)
+        public async Task<PagedResult<ApoliceResponse>> Handle(ListarApolicesQuery request, CancellationToken cancellationToken)
         {
             var page = request.Page <= 0 ? 1 : request.Page;
             var pageSize = request.PageSize <= 0 ? 10 : request.PageSize;
@@ -31,7 +31,7 @@ namespace Sinistros.Application.Apolices.Queries
             
             var DTOs = itens.Select(ApoliceResponse.Mapear).ToList();
 
-            return new PaginatedList<ApoliceResponse>(DTOs, total, page, pageSize);
+            return new PagedResult<ApoliceResponse>(DTOs, total, page, pageSize);
         }
     }
 }

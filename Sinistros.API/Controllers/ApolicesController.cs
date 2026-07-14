@@ -27,7 +27,7 @@ namespace Sinistros.API.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<PaginatedList<ApoliceResponse>>> List(
+        public async Task<ActionResult<PagedResult<ApoliceResponse>>> List(
             [FromQuery] string? status,
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 10)

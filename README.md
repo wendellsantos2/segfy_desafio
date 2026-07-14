@@ -1,265 +1,144 @@
-# 📋 Gestão de Sinistros - Segfy (Desafio Técnico Backend Pleno)
+# Gestão de Sinistros (Desafio Segfy)
 
-Este projeto consiste em uma Web API RESTful construída em **.NET 8** para a gestão de apólices e sinistros de seguros, aplicando práticas de **Clean Architecture**, **SOLID**, **Domain-Driven Design (DDD)** e testes automatizados.
+[![.NET CI](https://github.com/wendellsantos2/segfy_desafio/actions/workflows/ci.yml/badge.svg)](https://github.com/wendellsantos2/segfy_desafio/actions/workflows/ci.yml)
+
+Sistema completo para gestão de apólices e sinistros, desenvolvido com **Domain-Driven Design (DDD)**, **CQRS**, e arquitetura limpa em **.NET 8**, acompanhado de um frontend reativo em **React (Vite + TailwindCSS + TanStack Query)**.
+
+## 🚀 Como Executar (Docker)
+
+A maneira mais fácil de rodar todo o sistema é usando Docker. O projeto contém um `docker-compose.yml` que provisiona o banco de dados PostgreSQL, a API (Backend) e a aplicação React (Frontend) pronta para uso.
+
+```bash
+# Clone o repositório
+git clone https://github.com/wendellsantos2/segfy_desafio.git
+cd segfy_desafio
+
+# Suba os containers em background
+docker compose up -d
+```
+
+- **Frontend (Web):** http://localhost:5173
+- **Backend API (Swagger):** http://localhost:5113/swagger
+- **Banco de Dados:** localhost:5433 (PostgreSQL)
+
+> *As migrações do banco de dados e a carga inicial de dados (seeding) de Clientes e Apólices são executadas automaticamente ao iniciar a API.*
 
 ---
 
-## 🛠️ Arquitetura e Decisões Técnicas
+## 🏗️ Modelo de Domínio
 
-Para demonstrar domínio sobre arquitetura de software, extensibilidade e separação de preocupações, a aplicação foi estruturada seguindo os princípios de **Clean Architecture**. A estrutura é dividida em quatro camadas principais de responsabilidade bem definida:
+O domínio foi modelado utilizando as melhores práticas do **DDD**. Abaixo está a representação visual dos Aggregate Roots (Raízes de Agregado) e da Máquina de Estados do Sinistro.
 
-```
-┌────────────────────────────────────────────────────────┐
-│                      SegfyDesafio.API                  │ (Presentation)
-│       - Controllers, DTOs, Middlewares, Swagger        │
-└───────────┬────────────────────────────────┬───────────┘
-            │                                │
-            ▼                                ▼
-┌────────────────────────┐      ┌────────────────────────┐
-│ SegfyDesafio.Application│      │SegfyDesafio.Infrastructure│ (Data & External)
-│ - Services, Validators │      │ - EF Core Context      │
-│ - Mappings, Use Cases  │      │ - Repositories, Migr.  │
-└───────────┬────────────┘      └────────────┬───────────┘
-            │                                │
-            └───────────────┬────────────────┘
-                            ▼
-                ┌───────────────────────┐
-                │   SegfyDesafio.Domain │ (Core Domain)
-                │   - Entities, Enums   │
-                │   - Business Rules    │
-                └───────────────────────┘
-```
+```mermaid
+classDiagram
+    class Cliente {
+        <<Aggregate Root>>
+        +Guid Id
+        +string Nome
+        +Documento CpfCnpj
+    }
 
-### 1. Camadas do Projeto
-*   **Domain (Núcleo)**: Contém as entidades de domínio (`Cliente`, `Apolice`, `Sinistro`, `HistoricoSinistro`), enums, regras de negócio puras (validação de transição de status) e exceções de domínio. Não possui nenhuma dependência externa de frameworks ou bibliotecas de acesso a dados.
-*   **Application (Aplicação)**: Contém as interfaces de serviços e repositórios, DTOs (Data Transfer Objects), validadores (usando **FluentValidation**) e serviços de aplicação que orquestram os casos de uso.
-*   **Infrastructure (Infraestrutura)**: Implementa o acesso a banco de dados utilizando **Entity Framework Core**, as migrações (Migrations), repositórios e configurações específicas do banco de dados (mapeamentos Fluent API).
-*   **API (Apresentação)**: Endpoint HTTP construído em ASP.NET Core Web API. Contém os Controllers, tratamento global de erros via Middleware, configurações de injeção de dependência e documentação OpenAPI (Swagger).
-*   **Tests (Testes Unitários)**: Projeto separado com **xUnit**, **FluentAssertions** e **NSubstitute** para testar as regras de negócio críticas (criação de sinistro, fluxo de status unidirecional, obrigadoriedades).
+    class Apolice {
+        <<Aggregate Root>>
+        +Guid Id
+        +Guid ClienteId
+        +string Ramo
+        +Dinheiro Valor
+        +PeriodoVigencia Vigencia
+        +StatusApolice Status
+        +Suspender()
+        +Reativar()
+        +Cancelar()
+    }
 
-### 2. Padrões de Projeto Utilizados
-*   **Repository e Unit of Work**: Centraliza o acesso aos dados e garante transações atômicas, especialmente útil para salvar o sinistro e seu histórico na mesma transação.
-*   **State / Validador de Transição**: Implementação de uma máquina de estados simplificada dentro da entidade `Sinistro` para validar transições de status permitidas de forma unidirecional.
-*   **Rich Domain Model**: As entidades contêm comportamentos e regras de negócio próprias (ex: alterar status do sinistro), evitando o padrão anêmico.
-*   **Middleware de Exception Handling**: Captura exceções personalizadas de domínio (`DomainException`) e mapeia automaticamente para status HTTP corretos (ex: `400 Bad Request` ou `422 Unprocessable Entity`), retornando mensagens amigáveis e estruturadas.
+    class Sinistro {
+        <<Aggregate Root>>
+        +Guid Id
+        +Guid ApoliceId
+        +DateTime DataOcorrencia
+        +DateTime DataAbertura
+        +string Descricao
+        +Dinheiro ValorEstimado
+        +Dinheiro ValorAprovado
+        +StatusSinistro Status
+        +HistoricoSinistros[] Historico
+        +EnviarParaAnalise()
+        +Aprovar()
+        +Negar(MotivoNegativa)
+        +Encerrar(Dinheiro)
+    }
 
----
+    class AberturaDeSinistroService {
+        <<Domain Service>>
+        +AbrirSinistro(Apolice, command) Sinistro
+    }
 
-## 💾 Modelagem de Banco de Dados
-
-### Entidades do Sistema
-
-#### 1. Cliente
-*   `Id` (Guid, PK)
-*   `Nome` (varchar(150))
-*   `CpfCnpj` (varchar(20))
-
-#### 2. Apolice (Policy)
-*   `Id` (Guid, PK)
-*   `Numero` (varchar(50), Unique)
-*   `Status` (varchar(20)) — Valores: `Ativa`, `Inativa`
-*   `Ramo` (varchar(50)) — Ex: `Auto`, `Vida`, `Residencial`
-*   `ClienteId` (Guid, FK)
-*   `DataInicio` (DateTime)
-*   `DataFim` (DateTime)
-
-#### 3. Sinistro (Claim)
-*   `Id` (Guid, PK)
-*   `ApoliceId` (Guid, FK)
-*   `Status` (varchar(20)) — Valores: `Aberto`, `EmAnalise`, `Aprovado`, `Encerrado`, `Negado`
-*   `ValorEstimado` (decimal(18,2))
-*   `ValorAprovado` (decimal(18,2), Nullable) — Obrigatório em `Encerrado`
-*   `MotivoNegativa` (varchar(500), Nullable) — Obrigatório em `Negado`
-*   `DataOcorrencia` (DateTime)
-*   `DataAbertura` (DateTime)
-*   `DataAtualizacao` (DateTime)
-
-#### 4. HistoricoSinistro
-*   `Id` (Guid, PK)
-*   `SinistroId` (Guid, FK)
-*   `StatusAnterior` (varchar(20), Nullable)
-*   `StatusNovo` (varchar(20))
-*   `DataAlteracao` (DateTime)
-*   `Motivo` (varchar(500), Nullable)
-
----
-
-## 🚦 Regras de Negócio e Máquina de Estados
-
-### Fluxo de Status
-O status do sinistro segue obrigatoriamente o seguinte fluxo unidirecional:
-```
-Aberto ➔ EmAnalise ➔ Aprovado ➔ Encerrado (ou Negado, com motivo obrigatório)
-```
-
-As transições válidas de status implementadas no domínio são:
-1.  `Aberto` ➔ `EmAnalise`
-2.  `EmAnalise` ➔ `Aprovado` ou `Negado`
-3.  `Aprovado` ➔ `Encerrado` ou `Negado`
-
-### Regras Implementadas
-1.  **Abertura**: O sinistro só pode ser aberto se a apólice associada estiver com status `Ativa`.
-2.  **Transição**: Não é permitida a alteração de status fora das transições acima. Uma vez que o sinistro atinge `Encerrado` ou `Negado`, nenhuma outra alteração é permitida.
-3.  **Registro de Histórico**: Qualquer transição de status gera automaticamente um registro na tabela `HistoricoSinistros` contendo os status anterior/novo, data e motivo (opcional).
-4.  **Encerramento**: Ao transitar para o status `Encerrado`, o preenchimento do campo `ValorAprovado` é obrigatório.
-5.  **Negativa**: Ao transitar para o status `Negado`, o preenchimento do campo `MotivoNegativa` é obrigatório.
-
----
-
-## 📝 Consultas SQL (`queries.sql`)
-
-As consultas solicitadas para extração de indicadores estão estruturadas abaixo (será mantido um arquivo `queries.sql` na raiz do projeto):
-
-### 1. Ranking de ramos por maior percentual de sinistros negados nos últimos 6 meses
-```sql
--- PostgreSQL
-SELECT 
-    a.Ramo,
-    COUNT(CASE WHEN s.Status = 'Negado' THEN 1 END) * 100.0 / COUNT(*) AS PercentualNegados,
-    COUNT(CASE WHEN s.Status = 'Negado' THEN 1 END) AS QtdNegados,
-    COUNT(*) AS TotalSinistros
-FROM Sinistros s
-JOIN Apolices a ON s.ApoliceId = a.Id
-WHERE s.DataAbertura >= CURRENT_DATE - INTERVAL '6 months'
-GROUP BY a.Ramo
-ORDER BY PercentualNegados DESC;
-
--- SQL Server
-SELECT 
-    a.Ramo,
-    CAST(COUNT(CASE WHEN s.Status = 'Negado' THEN 1 END) AS DECIMAL(18,2)) * 100.0 / COUNT(*) AS PercentualNegados,
-    COUNT(CASE WHEN s.Status = 'Negado' THEN 1 END) AS QtdNegados,
-    COUNT(*) AS TotalSinistros
-FROM Sinistros s
-JOIN Apolices a ON s.ApoliceId = a.Id
-WHERE s.DataAbertura >= DATEADD(month, -6, GETDATE())
-GROUP BY a.Ramo
-ORDER BY PercentualNegados DESC;
-```
-
-### 2. Top 10 clientes com maior soma de ValorEstimado em sinistros em análise ou aprovados
-```sql
--- PostgreSQL
-SELECT 
-    c.Id AS ClienteId,
-    c.Nome AS ClienteNome,
-    SUM(s.ValorEstimado) AS TotalValorEstimado
-FROM Sinistros s
-JOIN Apolices a ON s.ApoliceId = a.Id
-JOIN Clientes c ON a.ClienteId = c.Id
-WHERE s.Status IN ('EmAnalise', 'Aprovado')
-GROUP BY c.Id, c.Nome
-ORDER BY TotalValorEstimado DESC
-LIMIT 10;
-
--- SQL Server
-SELECT TOP 10
-    c.Id AS ClienteId,
-    c.Nome AS ClienteNome,
-    SUM(s.ValorEstimado) AS TotalValorEstimado
-FROM Sinistros s
-JOIN Apolices a ON s.ApoliceId = a.Id
-JOIN Clientes c ON a.ClienteId = c.Id
-WHERE s.Status IN ('EmAnalise', 'Aprovado')
-GROUP BY c.Id, c.Nome
-ORDER BY TotalValorEstimado DESC;
-```
-
-### 3. Tempo médio de resolução (em dias) de sinistros encerrados, agrupado por ramo
-```sql
--- PostgreSQL
-SELECT 
-    a.Ramo,
-    AVG(EXTRACT(DAY FROM (h.DataAlteracao - s.DataAbertura))) AS TempoMedioResolucaoDias
-FROM Sinistros s
-JOIN Apolices a ON s.ApoliceId = a.Id
-JOIN HistoricoSinistros h ON s.Id = h.SinistroId
-WHERE s.Status = 'Encerrado' AND h.StatusNovo = 'Encerrado'
-GROUP BY a.Ramo;
-
--- SQL Server
-SELECT 
-    a.Ramo,
-    AVG(CAST(DATEDIFF(day, s.DataAbertura, h.DataAlteracao) AS DECIMAL(18,2))) AS TempoMedioResolucaoDias
-FROM Sinistros s
-JOIN Apolices a ON s.ApoliceId = a.Id
-JOIN HistoricoSinistros h ON s.Id = h.SinistroId
-WHERE s.Status = 'Encerrado' AND h.StatusNovo = 'Encerrado'
-GROUP BY a.Ramo;
+    Cliente "1" <-- "*" Apolice : Referência por Id
+    Apolice "1" <-- "*" Sinistro : Referência por Id
+    AberturaDeSinistroService ..> Apolice : Valida status
+    AberturaDeSinistroService ..> Sinistro : Fabrica
 ```
 
 ---
 
-## 🚀 Planejamento de Desenvolvimento (Passo a Passo)
+## 🧩 Padrões DDD Aplicados
 
-A execução do projeto está planejada nas seguintes etapas incrementais:
+Neste projeto, a complexidade de negócios está isolada na camada `Sinistros.Domain`.
 
-### Fase 1: Setup do Workspace e Projetos (.NET 8)
-1.  Criar a Solution (.sln) e os 5 projetos correspondentes (`Domain`, `Application`, `Infrastructure`, `API`, `Tests`).
-2.  Configurar referências entre os projetos (Domain <- Application <- API/Infrastructure).
-3.  Adicionar pacotes NuGet necessários:
-    *   `Npgsql.EntityFrameworkCore.PostgreSQL` e `Microsoft.EntityFrameworkCore.Tools` em Infrastructure.
-    *   `FluentValidation.DependencyInjectionExtensions` em Application.
-    *   `FluentAssertions` e `NSubstitute` em Tests.
-4.  Configurar o `docker-compose.yml` contendo um container de **PostgreSQL** para que a aplicação suba sem depender de instalação manual local.
+- **Aggregate Root:** `Cliente`, `Apolice` e `Sinistro`. Eles garantem a consistência transacional e protegem seus próprios estados.
+- **Value Objects:** `Dinheiro`, `PeriodoVigencia`, `Documento` e `MotivoNegativa`. Eles não possuem identidade e encapsulam lógicas de validação (ex: dinheiro não pode ser negativo, período de vigência requer início menor que fim).
+- **Domain Service:** `AberturaDeSinistroService`. Utilizado pois a regra "Um sinistro só pode ser aberto se a apólice correspondente estiver Ativa" envolve dois Agregados distintos (`Apolice` e `Sinistro`), não sendo responsabilidade exclusiva de nenhum deles.
+- **Repository por AR:** `ISinistroRepository`, `IApoliceRepository`. Cada interface lida com a persistência exclusivamente a partir de uma raiz de agregado.
+- **Unit of Work:** Interface `IUnitOfWork` (injetada no CQRS) que garante que a persistência das entidades e o disparo dos eventos ocorram na mesma transação de banco.
+- **Linguagem Ubíqua:** Termos como "Apólice Suspensa", "Sinistro em Análise", "Motivo de Negativa", refletem exatamente a linguagem de negócios do ramo de seguros diretamente nos nomes das classes e métodos.
 
-### Fase 2: Implementação do Core Domain
-1.  Modelar os Enums (`StatusApolice`, `StatusSinistro`).
-2.  Criar entidades `Cliente`, `Apolice`, `Sinistro` e `HistoricoSinistro` com propriedades ricas e construtores apropriados.
-3.  Implementar métodos de alteração de status em `Sinistro` com validação de transição, encapsulando as regras de negócio para evitar estados inválidos.
-
-### Fase 3: Infraestrutura e Acesso a Dados
-1.  Configurar a persistência via EF Core Fluent API (definir tamanhos de campos, chaves primárias, relacionamentos e restrições de nulidade).
-2.  Criar a implementação do `SegfyDbContext`.
-3.  Criar um Script de Seed de dados em banco (`Cliente` e `Apolice` em status Ativa/Inativa) para possibilitar a execução de testes rápidos de API.
-4.  Gerar as migrações (`dotnet ef migrations add InitialCreate`) e aplicar no banco.
-
-### Fase 4: Camada de Aplicação e Validações
-1.  Definir DTOs para inputs e outputs das APIs.
-2.  Criar os serviços de aplicação (ou casos de uso) para gerenciar fluxo de abertura de sinistro, busca e listagem.
-3.  Implementar validador de DTOs utilizando `FluentValidation`.
-
-### Fase 5: Exposição dos Endpoints (API) e Middlewares
-1.  Criar os Controllers:
-    *   `POST /api/sinistros` — Abertura.
-    *   `GET /api/sinistros/{id}` — Busca por Id.
-    *   `GET /api/sinistros` — Filtros por status, data e paginação.
-    *   `PATCH /api/sinistros/{id}/status` — Alterar status.
-    *   `GET /api/sinistros/{id}/historico` — Listar histórico.
-2.  Implementar `GlobalExceptionMiddleware` para capturar exceções de domínio e retornar HTTP Status Codes específicos (ex: 400 Bad Request ao quebrar regra de negócio).
-
-### Fase 6: Testes Unitários e Qualidade de Código
-1.  Escrever testes unitários abrangentes para cobrir os fluxos críticos:
-    *   Abertura de sinistro em apólices ativas vs. inativas.
-    *   Verificação do fluxo de transição de status válido e inválido.
-    *   Obrigatoriedade de `ValorAprovado` ao encerrar e `MotivoNegativa` ao negar.
-    *   Verificação de que a geração de histórico é disparada nas transições.
+## 📦 Bounded Context
+A aplicação representa um único **Bounded Context**: **Gestão de Sinistros**. 
+*Se este sistema crescesse para um cenário corporativo real*, eu separaria o contexto de **Subscrição/Emissão** (onde a apólice nasce e é gerenciada) do contexto de **Regulação de Sinistros** (onde a apólice é apenas *read-only* e os sinistros são avaliados). Nesse caso, eles se comunicariam por Eventos de Integração (Kafka/RabbitMQ) e não compartilharíamos o mesmo banco de dados.
 
 ---
 
-## 🛠️ Como Executar a Aplicação (Após Conclusão)
+## ⚖️ Decisões Arquiteturais e Ambiguidades
 
-### Pré-requisitos
-*   [.NET SDK 8.0](https://dotnet.microsoft.com/download/dotnet/8.0) ou superior.
-*   [Docker Desktop](https://www.docker.com/products/docker-desktop/) (opcional, para rodar o banco sem instalações locais).
+Ao longo do desenvolvimento, tomei algumas decisões perante os requisitos:
 
-### Passos para Rodar:
+1. **Ações Negadas:** O enunciado não especificava de *onde* um sinistro poderia ser negado. Decidi pela lógica de que ele só pode ser Negado enquanto estiver `Aberto` ou `EmAnalise`. Um sinistro já `Aprovado` não pode retroceder para `Negado`.
+2. **Filtros de Data:** O enunciado pedia para listar os sinistros filtrando por "data". Como o sinistro possui `DataOcorrencia`, `DataAbertura` e `DataEncerramento`, optei por usar a `DataAbertura` como padrão para os filtros do endpoint `GET /api/sinistros`, adicionando o parâmetro opcional `campoData` (podendo ser *abertura* ou *ocorrencia*) caso o cliente queira especificar.
+3. **Pluralização em Tabelas:** O enunciado mencionou a tabela `HistoricoSinistros` no plural. Para manter coerência, o EF Core foi mapeado explicitamente para utilizar a nomenclatura solicitada no plural para as entidades do domínio.
+4. **Front-end Opcional:** Como "plus", construí o frontend para orquestrar as APIs com regras de UX e chamadas Axios lidando com a especificação RFC 7807 (ProblemDetails).
 
-1.  **Iniciar Banco de Dados**:
-    ```bash
-    docker-compose up -d
-    ```
-2.  **Restaurar Pacotes e Rodar Migrations**:
-    ```bash
-    dotnet restore
-    dotnet ef database update --project SegfyDesafio.Infrastructure --startup-project SegfyDesafio.API
-    ```
-3.  **Executar a API**:
-    ```bash
-    dotnet run --project SegfyDesafio.API
-    ```
-    *A API estará acessível em `http://localhost:5000/swagger` ou `https://localhost:5001/swagger` para exploração dos endpoints.*
-4.  **Executar Testes**:
-    ```bash
-    dotnet test
-    ```
+---
+
+## 🔄 Trade-offs
+
+- **Por que DDD numa aplicação de escopo reduzido?**
+  Para demonstrar conhecimento arquitetural profundo. Embora CRUDs simples (como Clientes, neste caso) não demandem DDD, a *máquina de estados do Sinistro* justifica totalmente a modelagem rica e proteção de invariantes propostos pelo DDD.
+- **Por que MediatR?**
+  Para isolar os Controllers (que só conhecem HTTP e DTOs) dos Casos de Uso (Commands/Queries), garantindo que a aplicação seja agnóstica à Web. Isso facilita a futura implementação de *Background Services* ou *Mensageria* que precisem reaproveitar os mesmos casos de uso.
+- **Por que ProblemDetails (RFC 7807)?**
+  O uso de `IExceptionHandler` com `ProblemDetails` padroniza os erros da API. O frontend não precisa "adivinhar" o que deu errado; ele lê a propriedade `Detail` do erro 422 para mostrar ao usuário alertas amigáveis sobre regras de negócios violadas, sem vazar a stacktrace do C#.
+
+---
+
+## 🧪 Testes e Cobertura
+
+O domínio foi coberto por testes unitários usando **xUnit**, **Moq** e **FluentAssertions**, visando 100% de cobertura nos Value Objects e Entidades.
+
+**Como rodar:**
+```bash
+cd Sinistros.Tests
+dotnet test
+```
+
+Os testes cobrem:
+- Validações rígidas dos Value Objects (Dinheiro, Período, Motivo, Documento).
+- Regras de transição da máquina de estados do Sinistro.
+- Regra do `AberturaDeSinistroService` com mocks de repositórios.
+
+---
+
+## ⏳ O que eu faria com mais tempo?
+
+1. **Autenticação e Autorização:** Implementar JWT e RBAC, separando perfis de "Corretor" (pode abrir sinistros) e "Analista" (pode aprovar/negar).
+2. **Outbox Pattern:** O disparo de `DomainEvents` atual é sincrono (In-Memory pelo MediatR). Com mais tempo, eu salvaria os eventos numa tabela *Outbox* na mesma transação de banco e usaria um worker process (ex: Quartz.NET) para publicá-los, garantindo resiliência (*At-Least-Once delivery*).
+3. **Testes de Integração:** Adicionar testes de integração (E2E) subindo a aplicação em memória com `WebApplicationFactory` e `Testcontainers` para testar os endpoints passando por banco de dados real sem mocks.
