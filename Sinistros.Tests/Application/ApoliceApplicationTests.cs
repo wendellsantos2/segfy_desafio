@@ -82,9 +82,9 @@ namespace Sinistros.Tests.Application
 
             // Assert
             Assert.NotNull(result);
-            Assert.Single(result.Itens);
-            Assert.Equal(1, result.TotalCount);
-            Assert.Equal("AAAA-111111", result.Itens.First().Numero);
+            Assert.Single(result.Items);
+            Assert.Equal(1, result.TotalItems);
+            Assert.Equal("AAAA-111111", result.Items.First().Numero);
         }
 
         [Fact]
